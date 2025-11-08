@@ -4,9 +4,9 @@ Windchill远程操作工具的共享配置文件
 
 # SSH连接配置
 SSH_CONFIG = {
-    'hostname': '填写你建模用的windchill地址',
-    'username': 'root',
-    'password': 'root',
+    'hostname': 'your-server.com',  # 服务器地址
+    'username': 'your-username',    # SSH用户名
+    'password': 'your-password',    # SSH密码
     'port': 22,
     'timeout': 60
 }

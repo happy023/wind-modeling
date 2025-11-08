@@ -6,6 +6,7 @@
 - 模型文件上传
 - 代码和SQL生成
 - 生成文件收集
+- **Web在线建模服务**（新增）
 
 ## 功能特点
 
@@ -15,6 +16,9 @@
 - 模块化设计，支持独立运行或完整流程
 - 统一的配置管理
 - 彩色终端输出，提升可读性
+- **Web在线建模平台**：提供基于 FastAPI 的 Web 服务，支持文件上传、实时日志查看和结果下载
+- **实时日志推送**：通过 WebSocket 实时推送建模过程中的日志信息
+- **任务管理**：支持多客户端连接，自动管理建模任务队列
 
 ## 系统要求
 
@@ -22,6 +26,10 @@
 - 依赖包：
   - paramiko (SSH/SFTP 客户端)
   - colorama (终端彩色输出)
+  - fastapi (Web 框架，用于在线建模服务)
+  - uvicorn (ASGI 服务器，用于运行 FastAPI 应用)
+  - python-multipart (文件上传支持)
+  - jinja2 (模板引擎)
 
 ## 安装
 
@@ -95,6 +103,21 @@ python remote_modeling_collector.py
 python remote_modeling_pipeline.py
 ```
 
+### 3. 启动Web在线建模服务
+
+启动基于 FastAPI 的 Web 服务，提供在线建模功能：
+```bash
+python modeling_server.py
+```
+
+服务启动后，访问 `http://localhost:8000` 即可使用 Web 界面进行建模操作。
+
+**Web服务功能：**
+- 通过浏览器上传模型文件
+- 实时查看建模日志
+- 下载建模结果（ZIP格式）
+- 支持多任务管理
+
 ## 工具说明
 
 ### remote_modeling_prepare.py
@@ -121,6 +144,35 @@ python remote_modeling_pipeline.py
 - 按顺序执行所有步骤
 - 出错时立即停止并报告
 
+### modeling_server.py
+- **功能**：提供基于 FastAPI 的 Web 在线建模服务
+- **主要特性**：
+  - Web 界面：提供友好的 Web 界面进行建模操作
+  - 文件上传：支持通过 HTTP POST 上传模型文件（支持多文件）
+  - 实时日志：通过 WebSocket 实时推送建模过程中的日志信息
+  - 任务管理：自动生成任务ID，支持多客户端连接，同一时间只允许一个任务执行
+  - 结果下载：将建模结果打包为 ZIP 文件供用户下载
+  - 日志记录：所有操作日志自动保存到 `modeling.log` 文件
+- **API端点**：
+  - `GET /`：Web 主页界面
+  - `POST /upload`：上传模型文件（需要 client_id 和 task_id 参数）
+  - `GET /download`：下载建模结果（需要 task_id 参数）
+  - `GET /create_task`：创建新任务，返回任务ID
+  - `WebSocket /ws`：WebSocket 连接，用于实时日志推送和任务控制
+- **工作流程**：
+  1. 客户端通过 WebSocket 连接获取 client_id
+  2. 调用 `/create_task` 创建任务，获取 task_id
+  3. 通过 `/upload` 上传模型文件
+  4. 通过 WebSocket 发送建模指令（action: "modeling"）
+  5. 服务器自动解析上传的文件，提取 Java 类路径
+  6. 执行建模流程，实时推送日志
+  7. 建模完成后，通过 `/download` 下载结果
+- **技术实现**：
+  - 使用 FastAPI 构建 RESTful API 和 WebSocket 服务
+  - 自定义标准输出流，实现日志的实时推送和文件记录
+  - 异步任务处理，避免阻塞事件循环
+  - 自动任务隔离，每个任务使用独立的目录结构
+
 ## 错误处理
 
 - 所有工具都提供详细的错误信息
@@ -140,7 +192,8 @@ python remote_modeling_pipeline.py
 - [ ] 支持文件过滤（按日期/类型）
 - [ ] 添加 MD5 校验
 - [ ] 实现增量上传
-- [ ] 添加日志记录功能
+- [x] 添加日志记录功能（已实现）
+- [x] Web在线建模服务（已实现）
 
 ## 贡献
 
