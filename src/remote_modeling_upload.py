@@ -6,12 +6,12 @@ Windchill远程文件上传工具
 import os
 import paramiko
 from typing import List, Tuple, Optional
-from remote_modeling_config import SSH_CONFIG, WINDCHILL_CONFIG, MODEL_CLASSES
+from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
 
 
 class WindchillSFTPUploader:
     def __init__(self, hostname: str, username: str, password: str,
-                 wt_home: str, local_root: str = "model"):
+                 wt_home: str, local_root: str):
         """
         Windchill文件上传工具
 
@@ -163,8 +163,8 @@ def upload_models() -> Tuple[bool, Optional[str]]:
             hostname=SSH_CONFIG['hostname'],
             username=SSH_CONFIG['username'],
             password=SSH_CONFIG['password'],
-            wt_home=WINDCHILL_CONFIG['wt_home'],
-            local_root=WINDCHILL_CONFIG['local_root']
+            wt_home=MODELING_CONFIG['wt_home'],
+            local_root=MODELING_CONFIG['local_root']
     ) as uploader:
         print(f"🟢 已连接到 {SSH_CONFIG['hostname']}")
 

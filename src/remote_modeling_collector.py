@@ -8,12 +8,12 @@ import paramiko
 from typing import List, Optional, Tuple
 from stat import S_ISDIR
 from colorama import init, Fore, Back, Style
-from remote_modeling_config import SSH_CONFIG, WINDCHILL_CONFIG, MODEL_CLASSES
+from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
 
 
 class WindchillSFTPDownloader:
     def __init__(self, hostname: str, username: str, password: str,
-                 wt_home: str, local_base: str = "dist", port: int = 22):
+                 wt_home: str, local_base: str, port: int = 22):
         """
         Windchill SFTP文件下载工具
 
@@ -166,8 +166,8 @@ def collect_files() -> Tuple[bool, Optional[str]]:
         hostname=SSH_CONFIG['hostname'],
         username=SSH_CONFIG['username'],
         password=SSH_CONFIG['password'],
-        wt_home=WINDCHILL_CONFIG['wt_home'],
-        local_base=WINDCHILL_CONFIG['local_base'],
+        wt_home=MODELING_CONFIG['wt_home'],
+        local_base=MODELING_CONFIG['local_base'],
         port=SSH_CONFIG['port']
     ) as downloader:
         init(autoreset=True)  # 自动重置颜色

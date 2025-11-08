@@ -12,7 +12,7 @@ SSH_CONFIG = {
 }
 
 # Windchill环境配置
-WINDCHILL_CONFIG = {
+MODELING_CONFIG = {
     'wt_home': '/ptc/Windchill_11.0/Windchill',
     'local_base': '../dist',  # 用于下载的本地基目录
     'local_root': '../model'  # 用于上传的本地根目录
@@ -43,6 +43,6 @@ MODEL_CLASSES = [
     # 'ext.app.processautoconfig.model.ProcessConfigSequenceMasterIteration',
 
     # 'com.hihonor.wieditor.model.InspectionStandardTable',
-    'com.hihonor.wieditor.model.QualityStandardTable',
+    # 'com.hihonor.wieditor.model.QualityStandardTable',
 ]
 

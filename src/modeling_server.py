@@ -18,7 +18,7 @@ from fastapi import Query
 from starlette.responses import PlainTextResponse
 
 import remote_modeling_pipeline
-from remote_modeling_config import MODEL_CLASSES, WINDCHILL_CONFIG
+from remote_modeling_config import MODEL_CLASSES, MODELING_CONFIG
 from modeling_read_classname import get_java_class_full_path
 
 # 配置
@@ -151,10 +151,10 @@ class ConnectionManager:
             await self.send_status(client_id, "started")
 
             # 更新全局变量，后面拉莫会使用
-            WINDCHILL_CONFIG['local_base'] = 'dist/' + task_id
-            WINDCHILL_CONFIG['local_root'] = 'model/' + task_id
+            MODELING_CONFIG['local_base'] = MODELING_CONFIG['local_base'] + '/' + task_id
+            MODELING_CONFIG['local_root'] = MODELING_CONFIG['local_root'] + '/' + task_id
 
-            model_dir = os.path.abspath(WINDCHILL_CONFIG['local_root'])
+            model_dir = os.path.abspath(MODELING_CONFIG['local_root'])
             print(f"模型目录：{model_dir}")
 
             # 遍历当前目录下的所有文件和子目录

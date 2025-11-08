@@ -7,7 +7,7 @@ import paramiko
 import re
 import time
 from typing import List, Tuple, Optional
-from remote_modeling_config import SSH_CONFIG, WINDCHILL_CONFIG, MODEL_CLASSES
+from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
 
 
 class SmartWindchillExecutor:
@@ -144,7 +144,7 @@ def prepare_directories() -> Tuple[bool, Optional[str]]:
             hostname=SSH_CONFIG['hostname'],
             username=SSH_CONFIG['username'],
             password=SSH_CONFIG['password'],
-            wt_home=WINDCHILL_CONFIG['wt_home'],
+            wt_home=MODELING_CONFIG['wt_home'],
             port=SSH_CONFIG['port'],
             timeout=SSH_CONFIG['timeout']
     ) as executor:
@@ -172,8 +172,8 @@ def prepare_directories() -> Tuple[bool, Optional[str]]:
                 f'db/sql3/{package_path}'
             ]
             for path in base_paths:
-                commands.add(f'rm -rf {WINDCHILL_CONFIG["wt_home"]}/{path}')
-                commands.add(f'mkdir -p {WINDCHILL_CONFIG["wt_home"]}/{path}')
+                commands.add(f'rm -rf {MODELING_CONFIG["wt_home"]}/{path}')
+                commands.add(f'mkdir -p {MODELING_CONFIG["wt_home"]}/{path}')
         command_list = list(commands)
         for i, (cmd_success, cmd_output) in enumerate(executor.execute_commands(command_list)):
             if not cmd_success:

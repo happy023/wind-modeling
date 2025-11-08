@@ -1,6 +1,10 @@
 # Windchill 远程建模工具集
 
-这是一套用于 Windchill 远程建模的工具集，支持通过 SSH/SFTP 远程执行 Windchill 建模相关的操作。工具集包含以下功能：
+这是一套用于 Windchill 远程建模的工具集，支持通过 SSH/SFTP 远程执行 Windchill 建模相关的操作。目前只是勉强可用状态，可能会遇到一些问题需要自行解决。
+
+**重要说明**：本工具集本身不提供建模服务，而是作为客户端工具调用远程的 Windchill 建模服务。您需要先有一个支持建模的 Windchill 服务器（通常部署在本地虚拟机中），然后通过本工具集连接到该服务器并执行建模操作。本工具集的主要作用是让调用建模服务更加方便和高效。
+
+工具集包含以下功能：
 
 - 远程目录准备
 - 模型文件上传
@@ -22,6 +26,8 @@
 
 ## 系统要求
 
+### 本地环境要求
+
 - Python 3.6+
 - 依赖包：
   - paramiko (SSH/SFTP 客户端)
@@ -30,6 +36,15 @@
   - uvicorn (ASGI 服务器，用于运行 FastAPI 应用)
   - python-multipart (文件上传支持)
   - jinja2 (模板引擎)
+
+### 远程建模服务要求
+
+- **必须有一个可访问的 Windchill 建模服务器**（这是本工具集工作的前提条件）
+- 该服务器通常部署在本地虚拟机中，需要支持：
+  - SSH/SFTP 连接
+  - Windchill 建模功能（ant 任务执行）
+  - 文件系统读写权限
+- 确保本地环境能够通过 SSH 连接到该服务器
 
 ## 安装
 
@@ -46,26 +61,56 @@ pip install -r requirements.txt
 
 ## 配置
 
-编辑 `windchill_config.py` 文件配置连接信息：
+编辑 `src/remote_modeling_config.py` 文件配置连接信息：
+
+### Windchill连接配置（连接Windchill建模服务）
+
+**重要**：`SSH_CONFIG` 中的 `hostname` 配置的是**Windchill建模服务的地址**，通常情况下，这是部署在本地虚拟机中的 Windchill 服务地址。
 
 ```python
-# SSH连接配置
+# SSH连接配置 - 连接到Windchill建模服务
 SSH_CONFIG = {
-    'hostname': 'your-server.com',  # 服务器地址
-    'username': 'your-username',    # SSH用户名
+    'hostname': 'your-server.com',  # 建模服务地址（通常是本地虚拟机中的Windchill服务器地址）
+                                    # 例如：'192.168.1.100' 或 'windchill-vm.local'
+    'username': 'your-username',    # SSH用户名（用于连接建模服务器的SSH账户）
     'password': 'your-password',    # SSH密码
-    'port': 22,                     # SSH端口
+    'port': 22,                     # SSH端口（默认22）
     'timeout': 60                   # 超时时间(秒)
 }
+```
 
-# Windchill环境配置
-WINDCHILL_CONFIG = {
-    'wt_home': '/path/to/windchill',  # Windchill安装目录
-    'local_base': 'dist',             # 下载文件的本地基目录
-    'local_root': 'model'             # 上传文件的本地根目录
+**配置说明**：
+- `hostname`：**建模服务地址**，通常是本地虚拟机中 Windchill 服务器的 IP 地址或主机名
+  - 示例：`'192.168.1.100'`（虚拟机IP）
+  - 示例：`'windchill-vm.local'`（虚拟机主机名）
+  - 示例：`'localhost'`（如果建模服务在同一台机器上）
+- `username`：用于 SSH 连接的用户名，需要有权限访问 Windchill 安装目录和执行 ant 任务
+- `password`：SSH 连接密码
+- `port`：SSH 服务端口，默认 22
+- `timeout`：连接超时时间，建议设置为 60 秒或更长
+
+### 路径配置
+
+```python
+# 路径配置
+MODELING_CONFIG = {
+    'wt_home': '/path/to/windchill',  # 远程建模服务器上Windchill的安装目录
+                                      # 例如：'/ptc/Windchill_11.0/Windchill'
+    'local_base': '../dist',          # 下载文件的本地基目录（相对于工具运行目录）
+    'local_root': '../model'          # 上传文件的本地根目录（相对于工具运行目录）
 }
+```
 
-# 要处理的模型类列表
+**配置说明**：
+- `wt_home`：**远程建模服务器**上 Windchill 的安装路径（不是本地路径）
+- `local_base`：本地用于存储下载文件的目录
+- `local_root`：本地用于存储上传文件的目录
+
+### 模型类配置
+#### 执行脚本的时候在这里配置需要拉模的包路径，如果是通过Web操作则不想要这一步
+
+```python
+# 执行脚本的时候在这里配置需要拉模的包路径
 MODEL_CLASSES = [
     'ext.app.process.model.YourModel',
     # 添加更多模型类...
@@ -145,14 +190,18 @@ python modeling_server.py
 - 出错时立即停止并报告
 
 ### modeling_server.py
-- **功能**：提供基于 FastAPI 的 Web 在线建模服务
+- **功能**：提供基于 FastAPI 的 Web 在线建模服务（**注意：仍需要依赖远程建模服务**）
 - **主要特性**：
-  - Web 界面：提供友好的 Web 界面进行建模操作
+  - Web 界面：提供友好的 Web 界面进行建模操作，让调用远程建模服务更加方便
   - 文件上传：支持通过 HTTP POST 上传模型文件（支持多文件）
   - 实时日志：通过 WebSocket 实时推送建模过程中的日志信息
   - 任务管理：自动生成任务ID，支持多客户端连接，同一时间只允许一个任务执行
   - 结果下载：将建模结果打包为 ZIP 文件供用户下载
   - 日志记录：所有操作日志自动保存到 `modeling.log` 文件
+- **依赖说明**：
+  - Web 服务本身不提供建模功能，它只是提供了一个更方便的调用方式
+  - 底层仍然需要通过 SSH 连接到远程建模服务器（配置在 `remote_modeling_config.py` 中）
+  - 建模任务实际在远程服务器上执行，Web 服务负责文件传输、日志收集和结果下载
 - **API端点**：
   - `GET /`：Web 主页界面
   - `POST /upload`：上传模型文件（需要 client_id 和 task_id 参数）
@@ -181,10 +230,43 @@ python modeling_server.py
 
 ## 注意事项
 
-1. 确保 SSH 连接信息正确
-2. 确保 Windchill 环境配置正确
-3. 本地目录需要有写入权限
-4. 建议先小规模测试再处理大量文件
+### 前置条件
+
+1. **必须有一个可用的远程建模服务**：
+   - 确保您已经有一个部署好的 Windchill 建模服务器（通常在本地的虚拟机中）
+   - 该服务器必须支持 SSH/SFTP 连接
+   - 该服务器必须已安装并配置好 Windchill，能够执行建模相关的 ant 任务
+
+2. **网络连接**：
+   - 确保本地环境能够通过 SSH 连接到远程建模服务器
+   - 如果建模服务器在虚拟机中，确保虚拟机的网络配置正确（桥接模式或 NAT 模式）
+   - 测试连接：`ssh username@hostname` 应该能够成功连接
+
+### 配置注意事项
+
+3. **SSH 连接配置**：
+   - `hostname` 必须配置为**建模服务器的实际地址**（IP 或主机名）
+   - 确保 SSH 用户名和密码正确
+   - 确保 SSH 用户有权限访问 Windchill 安装目录和执行 ant 任务
+
+4. **Windchill 环境配置**：
+   - `wt_home` 必须是**远程服务器**上 Windchill 的实际安装路径
+   - 确保该路径在远程服务器上存在且可访问
+
+5. **本地目录权限**：
+   - 本地目录（`local_base` 和 `local_root`）需要有写入权限
+   - 建议使用相对路径，工具会自动创建目录
+
+### 使用建议
+
+6. **测试建议**：
+   - 建议先小规模测试再处理大量文件
+   - 可以先测试 SSH 连接：`python -c "from remote_modeling_config import SSH_CONFIG; print(SSH_CONFIG)"`
+   - 建议先运行单个工具测试，再运行完整流程
+
+7. **Web 服务注意事项**：
+   - Web 服务启动后，仍然需要通过 SSH 连接到远程建模服务器
+   - Web 服务只是提供了更方便的调用方式，底层仍然依赖远程建模服务
 
 ## 开发计划
 

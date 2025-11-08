@@ -7,7 +7,7 @@ import paramiko
 import re
 import time
 from typing import List, Tuple, Optional
-from remote_modeling_config import SSH_CONFIG, WINDCHILL_CONFIG, MODEL_CLASSES
+from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
 
 
 class SmartWindchillExecutor:
@@ -144,7 +144,7 @@ def generate_code() -> Tuple[bool, Optional[str]]:
             hostname=SSH_CONFIG['hostname'],
             username=SSH_CONFIG['username'],
             password=SSH_CONFIG['password'],
-            wt_home=WINDCHILL_CONFIG['wt_home'],
+            wt_home=MODELING_CONFIG['wt_home'],
             port=SSH_CONFIG['port'],
             timeout=SSH_CONFIG['timeout']
     ) as executor:
