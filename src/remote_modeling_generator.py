@@ -133,20 +133,30 @@ class SmartWindchillExecutor:
         self.close()
 
 
-def generate_code() -> Tuple[bool, Optional[str]]:
+def generate_code(
+    model_classes: Optional[List[str]] = None,
+    ssh_config: Optional[dict] = None,
+    modeling_config: Optional[dict] = None,
+) -> Tuple[bool, Optional[str]]:
     """
     生成代码和SQL的主函数
-    
+
+    可选参数用于外部注入配置；缺省时行为与原先完全一致。
+
     Returns:
         Tuple[bool, Optional[str]]: (是否成功, 错误信息)
     """
+    ssh = ssh_config or SSH_CONFIG
+    mc = modeling_config or MODELING_CONFIG
+    classes = MODEL_CLASSES if model_classes is None else model_classes
+
     with SmartWindchillExecutor(
-            hostname=SSH_CONFIG['hostname'],
-            username=SSH_CONFIG['username'],
-            password=SSH_CONFIG['password'],
-            wt_home=MODELING_CONFIG['wt_home'],
-            port=SSH_CONFIG['port'],
-            timeout=SSH_CONFIG['timeout']
+            hostname=ssh['hostname'],
+            username=ssh['username'],
+            password=ssh['password'],
+            wt_home=mc['wt_home'],
+            port=ssh['port'],
+            timeout=ssh['timeout']
     ) as executor:
         success, status = executor.execute_command('cd $WT_HOME')
         if not success:
@@ -155,27 +165,14 @@ def generate_code() -> Tuple[bool, Optional[str]]:
 
         # 批量执行命令
         commands = []
-        # 先执行class生成
-        # for model_class in MODEL_CLASSES:
-        #     class_path = model_class.replace('.', '/')
-        #     commands.extend([
-        #         f'ant -f bin/tools.xml class -Dclass.includes={class_path}.java -Dencoding=utf-8',
-        #     ])
-        #
-        # # 再执行sql生成
-        # for model_class in MODEL_CLASSES:
-        #     commands.extend([
-        #         f'ant -f bin/tools.xml sql_script -Dgen.input={model_class} -Dencoding=utf-8'
-        #     ])
-
         # 上面的方式在某些情况下不适合，比如存在相互依赖的模型，需要使用下面的方式
-        for model_class in MODEL_CLASSES:
+        for model_class in classes:
             class_path = model_class.replace('.', '/')
             package_path, class_name = class_path.rsplit('/', 1)
             # ant -f bin/tools.xml class -Dclass.includes=ext/app/processautoconfig/model/*.java
             commands.append(f'ant -f bin/tools.xml class -Dclass.includes={package_path}/*.java -Dencoding=utf-8')
 
-        for model_class in MODEL_CLASSES:
+        for model_class in classes:
             package_path, class_name = model_class.rsplit('.', 1)
             # ant -f bin/tools.xml sql_script -Dgen.input=ext.app.processautoconfig.model.* -Dencoding=utf-8
             commands.append(f'ant -f bin/tools.xml sql_script -Dgen.input={package_path}.* -Dencoding=utf-8')

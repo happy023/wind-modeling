@@ -152,23 +152,33 @@ class WindchillSFTPUploader:
         self.close()
 
 
-def upload_models() -> Tuple[bool, Optional[str]]:
+def upload_models(
+    model_classes: Optional[List[str]] = None,
+    ssh_config: Optional[dict] = None,
+    modeling_config: Optional[dict] = None,
+) -> Tuple[bool, Optional[str]]:
     """
     上传模型文件的主函数
-    
+
+    可选参数用于外部注入配置；缺省时行为与原先完全一致。
+
     Returns:
         Tuple[bool, Optional[str]]: (是否成功, 错误信息)
     """
-    with WindchillSFTPUploader(
-            hostname=SSH_CONFIG['hostname'],
-            username=SSH_CONFIG['username'],
-            password=SSH_CONFIG['password'],
-            wt_home=MODELING_CONFIG['wt_home'],
-            local_root=MODELING_CONFIG['local_root']
-    ) as uploader:
-        print(f"🟢 已连接到 {SSH_CONFIG['hostname']}")
+    ssh = ssh_config or SSH_CONFIG
+    mc = modeling_config or MODELING_CONFIG
+    classes = MODEL_CLASSES if model_classes is None else model_classes
 
-        for model_class in MODEL_CLASSES:
+    with WindchillSFTPUploader(
+            hostname=ssh['hostname'],
+            username=ssh['username'],
+            password=ssh['password'],
+            wt_home=mc['wt_home'],
+            local_root=mc['local_root']
+    ) as uploader:
+        print(f"🟢 已连接到 {ssh['hostname']}")
+
+        for model_class in classes:
             class_path, class_name = model_class.rsplit('.', 1)
             local_file = f'{class_name}.java'
             print(f"⬆️ 正在上传: {local_file}")

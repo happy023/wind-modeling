@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wind-modeling"
+version = "0.1.0"
+description = "Windchill 远程建模工具集（SSH/SFTP 客户端）"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = [
+    "paramiko>=2.12.0",
+    "colorama>=0.4.6",
+]
+
+[project.optional-dependencies]
+web = [
+    "fastapi~=0.121.0",
+    "uvicorn~=0.38.0",
+    "starlette~=0.49.3",
+    "jinja2",
+    "python-multipart",
+    "websockets",
+]
+
+[project.urls]
+Homepage = "https://gitee.com/happy0232/wind-modeling"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["wind_modeling*"]
+
+[tool.setuptools]
+# 保留原有扁平模块，使「在 src 下直接跑脚本」与「pip install 后 import」都能用
+py-modules = [
+    "remote_modeling_config",
+    "remote_modeling_prepare",
+    "remote_modeling_upload",
+    "remote_modeling_generator",
+    "remote_modeling_collector",
+    "remote_modeling_pipeline",
+    "modeling_read_classname",
+]

@@ -50,16 +50,39 @@
 
 ## 安装
 
-1. 克隆仓库：
+### 方式一：直接使用源码（原用法，不变）
+
 ```bash
-git clone <repository-url>
-cd windchill-remote-tools
+git clone https://gitee.com/happy0232/wind-modeling.git
+cd wind-modeling
+pip install -r requirements.txt
+cd src
+python remote_modeling_pipeline.py   # 或其它独立脚本 / modeling_server.py
 ```
 
-2. 安装依赖：
+### 方式二：作为 Python 包安装（供 windchill-cli 等调用）
+
 ```bash
-pip install -r requirements.txt
+pip install -e .                    # 开发：在本仓库根目录
+# 或
+pip install git+https://gitee.com/happy0232/wind-modeling.git
 ```
+
+安装后可：
+
+```python
+from wind_modeling import ModelingSession, run_pipeline
+
+session = ModelingSession(
+    hostname="...", username="...", password="...",
+    wt_home="/ptc/Windchill",
+    local_root="../model", local_base="../dist",
+    model_classes=["ext.app.Foo"],
+)
+print(run_pipeline(session))
+```
+
+独立脚本用法（编辑 `remote_modeling_config.py` 后在 `src/` 下运行）**保持不变**。
 
 ## 配置
 

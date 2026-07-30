@@ -133,20 +133,30 @@ class SmartWindchillExecutor:
         self.close()
 
 
-def prepare_directories() -> Tuple[bool, Optional[str]]:
+def prepare_directories(
+    model_classes: Optional[List[str]] = None,
+    ssh_config: Optional[dict] = None,
+    modeling_config: Optional[dict] = None,
+) -> Tuple[bool, Optional[str]]:
     """
     准备远程目录结构的主函数
-    
+
+    可选参数用于外部注入配置；缺省时行为与原先完全一致（读本模块全局配置）。
+
     Returns:
         Tuple[bool, Optional[str]]: (是否成功, 错误信息)
     """
+    ssh = ssh_config or SSH_CONFIG
+    mc = modeling_config or MODELING_CONFIG
+    classes = MODEL_CLASSES if model_classes is None else model_classes
+
     with SmartWindchillExecutor(
-            hostname=SSH_CONFIG['hostname'],
-            username=SSH_CONFIG['username'],
-            password=SSH_CONFIG['password'],
-            wt_home=MODELING_CONFIG['wt_home'],
-            port=SSH_CONFIG['port'],
-            timeout=SSH_CONFIG['timeout']
+            hostname=ssh['hostname'],
+            username=ssh['username'],
+            password=ssh['password'],
+            wt_home=mc['wt_home'],
+            port=ssh['port'],
+            timeout=ssh['timeout']
     ) as executor:
         # 执行快速命令
         success, result = executor.execute_command('pwd')
@@ -163,7 +173,7 @@ def prepare_directories() -> Tuple[bool, Optional[str]]:
 
         # 批量执行命令
         commands = set()
-        for model_class in MODEL_CLASSES:
+        for model_class in classes:
             package_path, class_name = model_class.replace('.', '/').rsplit("/", 1)
             base_paths = [
                 f'src/{package_path}',
@@ -172,8 +182,8 @@ def prepare_directories() -> Tuple[bool, Optional[str]]:
                 f'db/sql3/{package_path}'
             ]
             for path in base_paths:
-                commands.add(f'rm -rf {MODELING_CONFIG["wt_home"]}/{path}')
-                commands.add(f'mkdir -p {MODELING_CONFIG["wt_home"]}/{path}')
+                commands.add(f'rm -rf {mc["wt_home"]}/{path}')
+                commands.add(f'mkdir -p {mc["wt_home"]}/{path}')
         command_list = list(commands)
         for i, (cmd_success, cmd_output) in enumerate(executor.execute_commands(command_list)):
             if not cmd_success:

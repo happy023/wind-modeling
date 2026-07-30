@@ -155,24 +155,34 @@ class WindchillSFTPDownloader:
         self.close()
 
 
-def collect_files() -> Tuple[bool, Optional[str]]:
+def collect_files(
+    model_classes: Optional[List[str]] = None,
+    ssh_config: Optional[dict] = None,
+    modeling_config: Optional[dict] = None,
+) -> Tuple[bool, Optional[str]]:
     """
     收集生成的文件的主函数
-    
+
+    可选参数用于外部注入配置；缺省时行为与原先完全一致。
+
     Returns:
         Tuple[bool, Optional[str]]: (是否成功, 错误信息)
     """
+    ssh = ssh_config or SSH_CONFIG
+    mc = modeling_config or MODELING_CONFIG
+    classes = MODEL_CLASSES if model_classes is None else model_classes
+
     with WindchillSFTPDownloader(
-        hostname=SSH_CONFIG['hostname'],
-        username=SSH_CONFIG['username'],
-        password=SSH_CONFIG['password'],
-        wt_home=MODELING_CONFIG['wt_home'],
-        local_base=MODELING_CONFIG['local_base'],
-        port=SSH_CONFIG['port']
+        hostname=ssh['hostname'],
+        username=ssh['username'],
+        password=ssh['password'],
+        wt_home=mc['wt_home'],
+        local_base=mc['local_base'],
+        port=ssh['port']
     ) as downloader:
         init(autoreset=True)  # 自动重置颜色
 
-        for model_class in MODEL_CLASSES:
+        for model_class in classes:
             package_path, class_name = model_class.replace('.', '/').rsplit("/", 1)
             
             # 构建需要下载的文件列表

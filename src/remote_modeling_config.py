@@ -4,9 +4,9 @@ Windchill远程操作工具的共享配置文件
 
 # SSH连接配置
 SSH_CONFIG = {
-    'hostname': 'your-server.com',  # 服务器地址
-    'username': 'your-username',    # SSH用户名
-    'password': 'your-password',    # SSH密码
+    'hostname': 'pdmprd.cccar.com.cn',  # 服务器地址
+    'username': 'root',    # SSH用户名
+    'password': 'root',    # SSH密码
     'port': 22,
     'timeout': 60
 }
@@ -44,5 +44,10 @@ MODEL_CLASSES = [
 
     # 'com.hihonor.wieditor.model.InspectionStandardTable',
     # 'com.hihonor.wieditor.model.QualityStandardTable',
+
+    # 'ext.app.process.model.BOPProcessParamTableTitle',
+    # 'ext.app.process.model.BOPProcessParamTableDetail',
+    # 'com.hihonor.wftask.model.TaskCloseNotice',
+    #'ext.app.process.model.BOPStructPicture',
 ]
 
