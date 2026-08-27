@@ -52,12 +52,12 @@ class WindchillSFTPUploader:
             # 未显式指定平台时自动探测，并按平台规范化远程 wt_home
             if self.platform is None:
                 self.platform = detect_platform(self.ssh)
-            print(f"🖥️ 远程服务器平台: {self.platform}")
+            print(f"远程服务器平台: {self.platform}")
             self.wt_home = norm_remote(self.wt_home, self.platform)
             self.sftp = self.ssh.open_sftp()
             return True
         except Exception as e:
-            print(f"🔴 连接失败: {str(e)}")
+            print(f"连接失败: {str(e)}")
             return False
 
     def _get_remote_path(self, local_path: str, class_path: str) -> str:
@@ -181,17 +181,17 @@ def upload_models(
             local_root=mc['local_root'],
             platform=normalize_platform(ssh.get('platform'))
     ) as uploader:
-        print(f"🟢 已连接到 {ssh['hostname']}")
+        print(f"已连接到 {ssh['hostname']}")
 
         for model_class in classes:
             class_path, class_name = model_class.rsplit('.', 1)
             local_file = f'{class_name}.java'
-            print(f"⬆️ 正在上传: {local_file}")
+            print(f"正在上传: {local_file}")
             success, result = uploader.upload(local_file, 'src/' + class_path.replace('.', '/'), recursive=True)
 
             if not success:
                 return False, f"上传失败: {result}"
-            print(f"🟢 上传成功 -> 远程位置: {result}")
+            print(f"上传成功 -> 远程位置: {result}")
 
         return True, None
 
@@ -199,9 +199,9 @@ def upload_models(
 if __name__ == "__main__":
     success, error = upload_models()
     if not success:
-        print(f"❌ 上传模型失败: {error}")
+        print(f"上传模型失败: {error}")
         exit(1)
-    print("✅ 上传任务完成")
+    print("上传任务完成")
 
 # 高级功能扩展建议:
 # 1. 添加进度条显示

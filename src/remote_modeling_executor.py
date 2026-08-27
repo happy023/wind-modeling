@@ -17,10 +17,23 @@ from remote_modeling_platform import (
     decode_bytes,
     detect_platform,
     is_windows,
+    norm_remote,
     normalize_platform,
     prompt_pattern,
     set_wt_home_cmd,
+    windchill_pipe_cmd,
     windchill_shell_cmds,
+)
+
+# cmd/PowerShell 下命令不存在或执行失败的标记
+FAIL_MARKERS = (
+    "BUILD FAILED",
+    "不是内部或外部命令",
+    "not recognized",
+    "command not found",
+    "No such file or directory",
+    "系统找不到指定的路径",
+    "系统找不到指定的文件",
 )
 
 
@@ -78,6 +91,13 @@ class SmartWindchillExecutor:
             if self.platform is None:
                 self.platform = detect_platform(self.client)
             log(f"远程服务器平台: {self.platform}")
+
+            if is_windows(self.platform):
+                # Windows：windchill shell 是「新实例」交互程序，SSH 下不可交互；
+                # 目录等普通命令直接走 exec 通道，ant 类命令走管道喂 windchill.exe shell。
+                log("Windows 模式：非交互 exec 通道执行（windchill 命令走管道）")
+                self.shell = None
+                return True
 
             self.shell = self.client.invoke_shell()
             self.shell.settimeout(1)
@@ -147,6 +167,19 @@ class SmartWindchillExecutor:
 
     def execute_command(self, command: str, timeout: Optional[int] = None) -> Tuple[bool, str]:
         try:
+            if is_windows(self.platform) and self.client:
+                # Windows：普通 cmd 命令（目录操作等），exec 通道逐条执行
+                timeout = timeout or self.timeout
+                _stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
+                out = decode_bytes(stdout.read() or b"")
+                err = decode_bytes(stderr.read() or b"")
+                msg = f"{out}\n{err}".strip()
+                failed = any(k in msg for k in FAIL_MARKERS)
+                log(f"{'执行失败' if failed else '执行成功'}: {command}")
+                if msg:
+                    log(msg)
+                return (not failed), msg
+
             raw_output = self._send_and_wait(command, timeout)
             cleaned = []
             for line in raw_output.replace("\r\n", "\n").split("\n"):
@@ -154,23 +187,48 @@ class SmartWindchillExecutor:
                     cleaned.append(line)
             msg = "\n".join(cleaned).strip()
 
-            failed = any(
-                k in msg
-                for k in (
-                    "BUILD FAILED",
-                    "不是内部或外部命令",
-                    "not recognized",
-                    "command not found",
-                    "No such file or directory",
-                    "系统找不到指定的路径",
-                )
-            )
+            failed = any(k in msg for k in FAIL_MARKERS)
             log(f"{'执行失败' if failed else '执行成功'}: {command}")
             if msg:
                 log(msg)
             return (not failed), msg
         except Exception as e:
             error = f"执行出错: {e}，命令 {command}"
+            log(error)
+            return False, error
+
+    def execute_windchill(self, commands: List[str], timeout: Optional[int] = None) -> Tuple[bool, str]:
+        """批量在 Windchill 环境中执行命令。
+
+        - Windows：一次启动 windchill.exe shell（管道喂命令），全部命令一次跑完；
+        - Linux：逐个走交互 shell。
+        """
+        if not commands:
+            return True, ""
+        if not is_windows(self.platform):
+            results = self.execute_commands(commands)
+            failed = [r for r in results if not r[0]]
+            return (not failed), "\n".join(r[1] for r in results)
+
+        if not self.client:
+            return False, "SSH 连接未建立"
+        total = max(timeout or 0, self.timeout * max(1, len(commands)))
+        pipe = windchill_pipe_cmd(self.wt_home, commands, self.platform)
+        if not pipe:
+            return False, "无法生成 windchill 管道命令"
+        log(f"批量执行 {len(commands)} 条 Windchill 命令（管道，超时 {total}s）")
+        try:
+            _stdin, stdout, stderr = self.client.exec_command(pipe, timeout=total)
+            out = decode_bytes(stdout.read() or b"")
+            err = decode_bytes(stderr.read() or b"")
+            msg = f"{out}\n{err}".strip()
+            failed = any(k in msg for k in FAIL_MARKERS)
+            log(f"{'执行失败' if failed else '执行成功'}: Windchill 批量命令")
+            if msg:
+                log(msg)
+            return (not failed), msg
+        except Exception as e:
+            error = f"执行出错: {e}"
             log(error)
             return False, error
 

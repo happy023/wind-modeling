@@ -119,14 +119,41 @@ def pwd_cmd(platform: Optional[str]) -> str:
 
 
 def windchill_shell_cmds(wt_home: str, platform: Optional[str]) -> List[str]:
-    """Windchill shell 启动命令候选（按优先级尝试）。"""
+    """Windchill shell 启动命令候选（按优先级尝试，仅 Linux 交互场景）。"""
     if is_windows(platform):
-        home = norm_remote(wt_home, platform)
-        cmds = [f"{home}\\bin\\{name} shell" for name in WINDCHILL_SHELL_CANDIDATES]
-        cmds.append("windchill.cmd shell")
-        cmds.append("windchill shell")
-        return cmds
+        # Windows 上 windchill shell 是「新实例」交互程序，SSH 下不可交互，
+        # 需用管道方式非交互执行（见 windchill_pipe_cmd），此处返回空列表。
+        return []
     return [f"{wt_home}/bin/windchill shell"]
+
+
+def windchill_exe_path(wt_home: str, platform: Optional[str]) -> str:
+    """Windows 上 windchill 可执行文件（windchill.exe / windchill2.bat）。"""
+    if is_windows(platform):
+        return norm_remote(f"{wt_home}\\bin\\windchill.exe", platform)
+    return norm_remote(f"{wt_home}/bin/windchill", platform)
+
+
+def windchill_pipe_cmd(wt_home: str, commands: Iterable[str], platform: Optional[str]) -> Optional[str]:
+    """Windows 非交互执行 Windchill 环境命令（管道喂 windchill.exe shell）。
+
+    与 windchill-cli 的 `wc build` 同款方案：windchill shell 是「新实例」交互程序，
+    SSH 交互会话拿不到它的输出；改为 ``(echo cmd1 & echo cmd2 & echo exit) |
+    windchill.exe shell`` 一次启动完成全部命令。Linux 返回 None（走交互 shell）。
+    """
+    if not is_windows(platform):
+        return None
+    cmds = list(commands)
+    if not cmds:
+        return None
+    wt = norm_remote(wt_home, platform)
+    windchill = windchill_exe_path(wt_home, platform)
+    lines = " & ".join(f"echo {c}" for c in cmds)
+    return (
+        f'set "WT_HOME={wt}" && '
+        f'(echo cd /d "{wt}" & {lines} & echo exit) | '
+        f'"{windchill}" shell'
+    )
 
 
 def remove_dir_cmds(wt_home: str, rel_paths: Iterable[str], platform: Optional[str]) -> List[str]:

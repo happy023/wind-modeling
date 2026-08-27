@@ -60,7 +60,7 @@ class WindchillSFTPDownloader:
             # 未显式指定平台时自动探测，并按平台重建远程路径模块与 wt_home
             if self.platform is None:
                 self.platform = detect_platform(self.ssh)
-            print(f"🖥️ 远程服务器平台: {self.platform}")
+            print(f"远程服务器平台: {self.platform}")
             self.remote_mod = remote_path_module(self.platform)
             self.wt_home = norm_remote(self.wt_home, self.platform)
             self.sftp = self.ssh.open_sftp()
@@ -221,16 +221,16 @@ def collect_files(
             for remote_file in remote_files:
                 success, result = downloader.download_from_relative(remote_file)
                 if success:
-                    print(Fore.GREEN + f"🟢下载 {remote_file}: 成功 - {result}")
+                    print(f"下载 {remote_file}: 成功 - {result}")
                 else:
                     # return False, f"下载失败: {remote_file} - {result}"
-                    print(Fore.RED + f"❌下载 {remote_file}: 失败 - {result}")
+                    print(f"下载 {remote_file}: 失败 - {result}")
         return True, None
 
 
 if __name__ == "__main__":
     success, error = collect_files()
     if not success:
-        print(f"❌ 收集文件失败: {error}")
+        print(f"收集文件失败: {error}")
         exit(1)
-    print("✅ 文件收集完成")
+    print("文件收集完成")
