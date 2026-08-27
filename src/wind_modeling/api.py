@@ -25,6 +25,7 @@ class ModelingSession:
     local_base: str = "../dist"
     local_root: str = "../model"
     model_classes: list[str] = field(default_factory=list)
+    platform: Optional[str] = None  # 远程服务器平台 'linux'/'windows'；None 自动探测
 
     def ssh_config(self) -> dict:
         return {
@@ -33,6 +34,7 @@ class ModelingSession:
             "password": self.password,
             "port": self.port,
             "timeout": self.timeout,
+            "platform": self.platform,
         }
 
     def modeling_config(self) -> dict:

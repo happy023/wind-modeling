@@ -8,7 +8,10 @@ SSH_CONFIG = {
     'username': 'root',    # SSH用户名
     'password': 'root',    # SSH密码
     'port': 22,
-    'timeout': 60
+    'timeout': 60,
+    # 远程服务器平台: 'linux' | 'windows'（Windows 需已安装 OpenSSH Server）。
+    # 留空/None 时连接后自动探测（Linux 上有 uname，Windows 上没有）。
+    'platform': None,
 }
 
 # Windchill环境配置
@@ -49,5 +52,6 @@ MODEL_CLASSES = [
     # 'ext.app.process.model.BOPProcessParamTableDetail',
     # 'com.hihonor.wftask.model.TaskCloseNotice',
     #'ext.app.process.model.BOPStructPicture',
+    'ext.cirpoint.mpm.doc.model.CmWIPHandlingSuggestion'
 ]
 

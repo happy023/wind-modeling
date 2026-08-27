@@ -139,3 +139,8 @@ cython_debug/
 
 # idea files
 .idea
+
+# 建模运行产物与本地工具目录
+model/
+modeling.log
+.reasonix/

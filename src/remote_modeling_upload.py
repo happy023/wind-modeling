@@ -7,25 +7,34 @@ import os
 import paramiko
 from typing import List, Tuple, Optional
 from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
+from remote_modeling_platform import (
+    detect_platform,
+    ensure_sftp_dir,
+    join_remote,
+    norm_remote,
+    normalize_platform,
+)
 
 
 class WindchillSFTPUploader:
     def __init__(self, hostname: str, username: str, password: str,
-                 wt_home: str, local_root: str):
+                 wt_home: str, local_root: str, platform: Optional[str] = None):
         """
         Windchill文件上传工具
 
         :param host: Linux服务器地址
         :param user: SSH用户名
         :param pwd: SSH密码
-        :param wt_home: Windchill主目录(如/home/windchill/windchill_11.0)
+        :param wt_home: Windchill主目录(如/home/windchill/windchill_11.0 或 C:/ptc/Windchill)
         :param local_root: 本地文件根目录(用于计算相对路径)
+        :param platform: 远程服务器平台 'linux' / 'windows'；None 自动探测
         """
         self.hostname = hostname
         self.username = username
         self.password = password
-        self.wt_home = os.path.normpath(wt_home)
+        self.wt_home = str(wt_home)
         self.local_root = os.path.expanduser(local_root)
+        self.platform = normalize_platform(platform)
         self.ssh = None
         self.sftp = None
 
@@ -40,6 +49,11 @@ class WindchillSFTPUploader:
                 password=self.password,
                 timeout=10
             )
+            # 未显式指定平台时自动探测，并按平台规范化远程 wt_home
+            if self.platform is None:
+                self.platform = detect_platform(self.ssh)
+            print(f"🖥️ 远程服务器平台: {self.platform}")
+            self.wt_home = norm_remote(self.wt_home, self.platform)
             self.sftp = self.ssh.open_sftp()
             return True
         except Exception as e:
@@ -57,27 +71,17 @@ class WindchillSFTPUploader:
         """
         # 获取相对于本地根目录的路径
         rel_path = os.path.relpath(local_path, self.local_root)
-        remote_path = os.path.join(self.wt_home, class_path)
-        remote_path = os.path.join(remote_path, rel_path).replace('\\', '/')
+        remote_path = join_remote(
+            self.wt_home, class_path, rel_path, platform=self.platform
+        )
 
         print(f"远程路径:{remote_path}")
 
         return remote_path
 
     def _ensure_remote_dir(self, remote_path: str):
-        """确保远程目录存在"""
-        dir_path = os.path.dirname(remote_path)
-        if dir_path == '':
-            return
-
-        try:
-            self.sftp.stat(dir_path)
-        except IOError:
-            # 递归创建目录
-            parent_dir = os.path.dirname(dir_path)
-            if parent_dir != '/':
-                self._ensure_remote_dir(parent_dir)
-            self.sftp.mkdir(dir_path)
+        """确保远程目录存在（跨平台，含 Windows 根目录判断）"""
+        ensure_sftp_dir(self.sftp, remote_path, self.platform)
 
     def upload(self, local_path: str, class_path: str, recursive: bool = False) -> Tuple[bool, str]:
         """
@@ -127,10 +131,10 @@ class WindchillSFTPUploader:
             local_path = os.path.join(local_dir, item)
             if os.path.isdir(local_path):
                 if recursive:
-                    success, path = self._upload_dir(local_path, recursive)
+                    success, path = self._upload_dir(local_path, class_path, recursive)
                     uploaded_files.append((success, path))
             else:
-                success, path = self._upload_file(local_path)
+                success, path = self._upload_file(local_path, class_path)
                 uploaded_files.append((success, path))
 
         # 返回目录路径和上传的文件数
@@ -174,7 +178,8 @@ def upload_models(
             username=ssh['username'],
             password=ssh['password'],
             wt_home=mc['wt_home'],
-            local_root=mc['local_root']
+            local_root=mc['local_root'],
+            platform=normalize_platform(ssh.get('platform'))
     ) as uploader:
         print(f"🟢 已连接到 {ssh['hostname']}")
 

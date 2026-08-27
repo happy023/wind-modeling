@@ -43,10 +43,9 @@
 
 - **必须有一个可访问的 Windchill 建模服务器**（这是本工具集工作的前提条件）
 - 该服务器通常部署在本地虚拟机中，需要支持：
-  - SSH/SFTP 连接
+  - SSH/SFTP 连接（Windows 服务器需安装 OpenSSH Server，默认 shell 保持 cmd.exe）
   - Windchill 建模功能（ant 任务执行）
   - 文件系统读写权限
-- 确保本地环境能够通过 SSH 连接到该服务器
 
 ## 安装
 
@@ -100,7 +99,10 @@ SSH_CONFIG = {
     'username': 'your-username',    # SSH用户名（用于连接建模服务器的SSH账户）
     'password': 'your-password',    # SSH密码
     'port': 22,                     # SSH端口（默认22）
-    'timeout': 60                   # 超时时间(秒)
+    'timeout': 60,                  # 超时时间(秒)
+    'platform': None                # 远程服务器平台: 'linux' / 'windows'
+                                    #   None(默认)/留空 = 连接后自动探测
+                                    #   Windows 需已安装 OpenSSH Server，默认 shell 保持 cmd.exe
 }
 ```
 
@@ -121,6 +123,7 @@ SSH_CONFIG = {
 MODELING_CONFIG = {
     'wt_home': '/path/to/windchill',  # 远程建模服务器上Windchill的安装目录
                                       # 例如：'/ptc/Windchill_11.0/Windchill'
+                                      # Windows: 'C:/ptc/Windchill_11.0/Windchill'
     'local_base': '../dist',          # 下载文件的本地基目录（相对于工具运行目录）
     'local_root': '../model'          # 上传文件的本地根目录（相对于工具运行目录）
 }

@@ -11,6 +11,8 @@ from __future__ import annotations
 import sys
 from typing import List, Optional, Tuple
 
+from remote_modeling_executor import log
+
 import remote_modeling_prepare
 import remote_modeling_upload
 import remote_modeling_generator
@@ -27,44 +29,43 @@ def modeling(
     Returns:
         (是否成功, 错误信息)。命令行 ``__main__`` 仍会在失败时 sys.exit(1)。
     """
-    print("🚀 开始Windchill远程建模流程...")
+    try:
+        log("开始 Windchill 远程建模流程...")
 
-    kwargs = {
-        "model_classes": model_classes,
-        "ssh_config": ssh_config,
-        "modeling_config": modeling_config,
-    }
+        kwargs = {
+            "model_classes": model_classes,
+            "ssh_config": ssh_config,
+            "modeling_config": modeling_config,
+        }
 
-    # 1. 准备目录
-    success, error = remote_modeling_prepare.prepare_directories(**kwargs)
-    if not success:
-        print(f"❌ 准备目录失败: {error}")
-        return False, error
-    print("✅ 目录准备完成")
+        success, error = remote_modeling_prepare.prepare_directories(**kwargs)
+        if not success:
+            log(f"准备目录失败: {error}")
+            return False, error
+        log("目录准备完成")
 
-    # 2. 上传模型
-    success, error = remote_modeling_upload.upload_models(**kwargs)
-    if not success:
-        print(f"❌ 上传模型失败: {error}")
-        return False, error
-    print("✅ 模型上传完成")
+        success, error = remote_modeling_upload.upload_models(**kwargs)
+        if not success:
+            log(f"上传模型失败: {error}")
+            return False, error
+        log("模型上传完成")
 
-    # 3. 生成代码
-    success, error = remote_modeling_generator.generate_code(**kwargs)
-    if not success:
-        print(f"❌ 生成代码失败: {error}")
-        return False, error
-    print("✅ 代码生成完成")
+        success, error = remote_modeling_generator.generate_code(**kwargs)
+        if not success:
+            log(f"生成代码失败: {error}")
+            return False, error
+        log("代码生成完成")
 
-    # 4. 收集结果
-    success, error = remote_modeling_collector.collect_files(**kwargs)
-    if not success:
-        print(f"❌ 收集结果失败: {error}")
-        return False, error
-    print("✅ 结果收集完成")
-
-    print("\n🎉 所有操作已完成!")
-    return True, None
+        success, error = remote_modeling_collector.collect_files(**kwargs)
+        if not success:
+            log(f"收集结果失败: {error}")
+            return False, error
+        log("结果收集完成")
+        log("所有操作已完成")
+        return True, None
+    except Exception as e:
+        log(f"建模流程异常: {e}")
+        return False, str(e)
 
 
 if __name__ == "__main__":

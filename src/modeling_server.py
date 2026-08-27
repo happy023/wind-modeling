@@ -151,8 +151,8 @@ class ConnectionManager:
             await self.send_status(client_id, "started")
 
             # 更新全局变量，后面拉莫会使用
-            MODELING_CONFIG['local_base'] = MODELING_CONFIG['local_base'] + '/' + task_id
-            MODELING_CONFIG['local_root'] = MODELING_CONFIG['local_root'] + '/' + task_id
+            MODELING_CONFIG['local_base'] = os.path.join(MODELING_CONFIG['local_base'], task_id)
+            MODELING_CONFIG['local_root'] = os.path.join(MODELING_CONFIG['local_root'], task_id)
 
             model_dir = os.path.abspath(MODELING_CONFIG['local_root'])
             print(f"模型目录：{model_dir}")

@@ -6,30 +6,41 @@ Windchill远程文件下载工具
 import os
 import paramiko
 from typing import List, Optional, Tuple
-from stat import S_ISDIR
 from colorama import init, Fore, Back, Style
 from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
+from remote_modeling_platform import (
+    detect_platform,
+    is_sftp_dir,
+    join_remote,
+    norm_remote,
+    normalize_platform,
+    remote_path_module,
+)
 
 
 class WindchillSFTPDownloader:
     def __init__(self, hostname: str, username: str, password: str,
-                 wt_home: str, local_base: str, port: int = 22):
+                 wt_home: str, local_base: str, port: int = 22,
+                 platform: Optional[str] = None):
         """
         Windchill SFTP文件下载工具
 
         :param hostname: 服务器地址
         :param username: SSH用户名
         :param password: SSH密码
-        :param wt_home: 远程Windchill根目录(如/opt/ptc/Windchill)
+        :param wt_home: 远程Windchill根目录(如/opt/ptc/Windchill 或 C:/ptc/Windchill)
         :param local_base: 本地存储基目录(如D:/src)
         :param port: SSH端口
+        :param platform: 远程服务器平台 'linux' / 'windows'；None 自动探测
         """
         self.hostname = hostname
         self.port = port
         self.username = username
         self.password = password
-        self.wt_home = wt_home.rstrip('/')
-        self.local_base = local_base.replace('\\', '/').rstrip('/')
+        self.platform = normalize_platform(platform)
+        self.remote_mod = remote_path_module(self.platform)  # 探测后按实际平台重建
+        self.wt_home = str(wt_home).strip()
+        self.local_base = os.path.normpath(os.path.expanduser(local_base))
         self.ssh = None
         self.sftp = None
 
@@ -46,6 +57,12 @@ class WindchillSFTPDownloader:
                 username=self.username,
                 password=self.password
             )
+            # 未显式指定平台时自动探测，并按平台重建远程路径模块与 wt_home
+            if self.platform is None:
+                self.platform = detect_platform(self.ssh)
+            print(f"🖥️ 远程服务器平台: {self.platform}")
+            self.remote_mod = remote_path_module(self.platform)
+            self.wt_home = norm_remote(self.wt_home, self.platform)
             self.sftp = self.ssh.open_sftp()
             return True
         except Exception as e:
@@ -62,9 +79,10 @@ class WindchillSFTPDownloader:
         本地基目录: D:/src
         返回: D:/src/bin/startup.sh
         """
-        # 获取相对于WT_HOME的路径
-        rel_path = os.path.relpath(remote_path, self.wt_home)
-        local_path = os.path.join(self.local_base, rel_path).replace('\\', '/')
+        # 获取相对于WT_HOME的路径（按远程平台分隔符），本地统一转 '/' 再拼接
+        rel_path = self.remote_mod.relpath(remote_path, self.wt_home)
+        rel_parts = [p for p in str(rel_path).replace('\\', '/').split('/') if p]
+        local_path = os.path.join(self.local_base, *rel_parts)
 
         # 创建本地目录
         local_dir = os.path.dirname(local_path)
@@ -73,11 +91,8 @@ class WindchillSFTPDownloader:
         return local_path
 
     def _is_dir(self, path: str) -> bool:
-        """检查远程路径是否为目录"""
-        try:
-            return S_ISDIR(self.sftp.stat(path).st_mode)
-        except IOError:
-            return False
+        """检查远程路径是否为目录（兼容 Windows sftp-server 模式位缺失）"""
+        return is_sftp_dir(self.sftp, path)
 
     def download_file(self, remote_path: str) -> Tuple[bool, str]:
         """
@@ -117,8 +132,8 @@ class WindchillSFTPDownloader:
         results = []
         try:
             for entry in self.sftp.listdir_attr(remote_dir):
-                remote_path = f"{remote_dir}/{entry.filename}"
-                if S_ISDIR(entry.st_mode):
+                remote_path = join_remote(remote_dir, entry.filename, platform=self.platform)
+                if self._is_dir(remote_path):
                     if recursive:
                         results.extend(self.download_directory(remote_path, recursive))
                 else:
@@ -135,7 +150,7 @@ class WindchillSFTPDownloader:
         :param rel_path: 相对于WT_HOME的路径(如"bin/startup.sh")
         :return: (是否成功, 本地存储路径或错误信息)
         """
-        remote_path = f"{self.wt_home}/{rel_path.lstrip('/')}"
+        remote_path = join_remote(self.wt_home, rel_path.lstrip('/\\'), platform=self.platform)
         if self._is_dir(remote_path):
             return self.download_directory(remote_path)
         return self.download_file(remote_path)
@@ -178,7 +193,8 @@ def collect_files(
         password=ssh['password'],
         wt_home=mc['wt_home'],
         local_base=mc['local_base'],
-        port=ssh['port']
+        port=ssh['port'],
+        platform=normalize_platform(ssh.get('platform'))
     ) as downloader:
         init(autoreset=True)  # 自动重置颜色
 

@@ -38,6 +38,8 @@ include = ["wind_modeling*"]
 # 保留原有扁平模块，使「在 src 下直接跑脚本」与「pip install 后 import」都能用
 py-modules = [
     "remote_modeling_config",
+    "remote_modeling_platform",
+    "remote_modeling_executor",
     "remote_modeling_prepare",
     "remote_modeling_upload",
     "remote_modeling_generator",
