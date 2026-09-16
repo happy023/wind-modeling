@@ -45,15 +45,16 @@ def prepare_directories(
 
         # 执行快速命令
         success, result = executor.execute_command(pwd_cmd(platform))
-        log(f"当前目录: {'成功' if success else '失败'}")
+        log(f"当前目录: {'成功' if success else '失败'}",
+            "success" if success else "error")
         log(result)
 
         success, status = executor.execute_command(cd_wt_home_cmd(mc['wt_home'], platform))
         if success:
-            log("已进入 WT_HOME:")
+            log("已进入 WT_HOME:", "success")
             log(status)
         else:
-            log(f"进入 WT_HOME 失败: {status}")
+            log(f"进入 WT_HOME 失败: {status}", "error")
 
         # 批量执行命令（ensure_dir_cmds 保证全部删除在前、创建在后；dict.fromkeys 去重保序）
         rel_paths = []
@@ -76,6 +77,6 @@ def prepare_directories(
 if __name__ == "__main__":
     success, error = prepare_directories()
     if not success:
-        log(f"准备目录失败: {error}")
+        log(f"准备目录失败: {error}", "error")
         raise SystemExit(1)
-    log("目录准备完成")
+    log("目录准备完成", "success")

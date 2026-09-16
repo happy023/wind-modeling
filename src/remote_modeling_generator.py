@@ -47,7 +47,7 @@ def generate_code(
         if not is_windows(platform):
             success, status = executor.execute_command(cd_wt_home_cmd(mc['wt_home'], platform))
             if not success:
-                log(f"进入Windchill目录失败: {status}")
+                log(f"进入Windchill目录失败: {status}", "error")
                 return False, "进入Windchill目录失败"
 
         # 批量执行命令
@@ -88,6 +88,6 @@ def generate_code(
 if __name__ == "__main__":
     success, error = generate_code()
     if not success:
-        log(f"生成代码失败: {error}")
+        log(f"生成代码失败: {error}", "error")
         raise SystemExit(1)
-    log("代码生成完成")
+    log("代码生成完成", "success")

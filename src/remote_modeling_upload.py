@@ -7,6 +7,7 @@ import os
 import paramiko
 from typing import List, Tuple, Optional
 from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
+from remote_modeling_executor import log
 from remote_modeling_platform import (
     detect_platform,
     ensure_sftp_dir,
@@ -52,12 +53,12 @@ class WindchillSFTPUploader:
             # 未显式指定平台时自动探测，并按平台规范化远程 wt_home
             if self.platform is None:
                 self.platform = detect_platform(self.ssh)
-            print(f"远程服务器平台: {self.platform}")
+            log(f"远程服务器平台: {self.platform}")
             self.wt_home = norm_remote(self.wt_home, self.platform)
             self.sftp = self.ssh.open_sftp()
             return True
         except Exception as e:
-            print(f"连接失败: {str(e)}")
+            log(f"连接失败: {str(e)}", "error")
             return False
 
     def _get_remote_path(self, local_path: str, class_path: str) -> str:
@@ -75,7 +76,7 @@ class WindchillSFTPUploader:
             self.wt_home, class_path, rel_path, platform=self.platform
         )
 
-        print(f"远程路径:{remote_path}")
+        log(f"远程路径: {remote_path}")
 
         return remote_path
 
@@ -101,7 +102,7 @@ class WindchillSFTPUploader:
 
             local_path = os.path.normpath(local_path)
 
-            print(f"本地路径：{local_path}")
+            log(f"本地路径: {local_path}")
 
             if os.path.isdir(local_path):
                 return self._upload_dir(local_path, class_path, recursive)
@@ -181,17 +182,17 @@ def upload_models(
             local_root=mc['local_root'],
             platform=normalize_platform(ssh.get('platform'))
     ) as uploader:
-        print(f"已连接到 {ssh['hostname']}")
+        log(f"已连接到 {ssh['hostname']}", "success")
 
         for model_class in classes:
             class_path, class_name = model_class.rsplit('.', 1)
             local_file = f'{class_name}.java'
-            print(f"正在上传: {local_file}")
+            log(f"正在上传: {local_file}")
             success, result = uploader.upload(local_file, 'src/' + class_path.replace('.', '/'), recursive=True)
 
             if not success:
                 return False, f"上传失败: {result}"
-            print(f"上传成功 -> 远程位置: {result}")
+            log(f"上传成功 -> 远程位置: {result}", "success")
 
         return True, None
 
@@ -199,9 +200,9 @@ def upload_models(
 if __name__ == "__main__":
     success, error = upload_models()
     if not success:
-        print(f"上传模型失败: {error}")
+        log(f"上传模型失败: {error}", "error")
         exit(1)
-    print("上传任务完成")
+    log("上传任务完成", "success")
 
 # 高级功能扩展建议:
 # 1. 添加进度条显示

@@ -6,8 +6,8 @@ Windchill远程文件下载工具
 import os
 import paramiko
 from typing import List, Optional, Tuple
-from colorama import init, Fore, Back, Style
 from remote_modeling_config import SSH_CONFIG, MODELING_CONFIG, MODEL_CLASSES
+from remote_modeling_executor import log
 from remote_modeling_platform import (
     detect_platform,
     is_sftp_dir,
@@ -44,7 +44,7 @@ class WindchillSFTPDownloader:
         self.ssh = None
         self.sftp = None
 
-        print(f"下载目录：{self.local_base}")
+        log(f"下载目录: {self.local_base}")
 
     def connect(self) -> bool:
         """建立SFTP连接"""
@@ -60,13 +60,13 @@ class WindchillSFTPDownloader:
             # 未显式指定平台时自动探测，并按平台重建远程路径模块与 wt_home
             if self.platform is None:
                 self.platform = detect_platform(self.ssh)
-            print(f"远程服务器平台: {self.platform}")
+            log(f"远程服务器平台: {self.platform}")
             self.remote_mod = remote_path_module(self.platform)
             self.wt_home = norm_remote(self.wt_home, self.platform)
             self.sftp = self.ssh.open_sftp()
             return True
         except Exception as e:
-            print(f"连接失败: {str(e)}")
+            log(f"连接失败: {str(e)}", "error")
             return False
 
     def _ensure_local_dir(self, remote_path: str) -> str:
@@ -115,7 +115,7 @@ class WindchillSFTPDownloader:
         except Exception as e:
             if os.path.exists(local_path):
                 os.remove(local_path)  # 删除文件
-                print(f"删除生成出错的临时文件 {local_path}")
+                log(f"删除生成出错的临时文件 {local_path}", "warning")
             return False, f"下载失败: {str(e)}"
 
     def download_directory(self, remote_dir: str, recursive: bool = True) -> List[Tuple[bool, str]]:
@@ -196,8 +196,6 @@ def collect_files(
         port=ssh['port'],
         platform=normalize_platform(ssh.get('platform'))
     ) as downloader:
-        init(autoreset=True)  # 自动重置颜色
-
         for model_class in classes:
             package_path, class_name = model_class.replace('.', '/').rsplit("/", 1)
             
@@ -221,16 +219,16 @@ def collect_files(
             for remote_file in remote_files:
                 success, result = downloader.download_from_relative(remote_file)
                 if success:
-                    print(f"下载 {remote_file}: 成功 - {result}")
+                    log(f"下载 {remote_file}: 成功 - {result}", "success")
                 else:
                     # return False, f"下载失败: {remote_file} - {result}"
-                    print(f"下载 {remote_file}: 失败 - {result}")
+                    log(f"下载 {remote_file}: 失败 - {result}", "warning")
         return True, None
 
 
 if __name__ == "__main__":
     success, error = collect_files()
     if not success:
-        print(f"收集文件失败: {error}")
+        log(f"收集文件失败: {error}", "error")
         exit(1)
-    print("文件收集完成")
+    log("文件收集完成", "success")

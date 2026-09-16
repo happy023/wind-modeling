@@ -40,31 +40,31 @@ def modeling(
 
         success, error = remote_modeling_prepare.prepare_directories(**kwargs)
         if not success:
-            log(f"准备目录失败: {error}")
+            log(f"准备目录失败: {error}", "error")
             return False, error
-        log("目录准备完成")
+        log("目录准备完成", "success")
 
         success, error = remote_modeling_upload.upload_models(**kwargs)
         if not success:
-            log(f"上传模型失败: {error}")
+            log(f"上传模型失败: {error}", "error")
             return False, error
-        log("模型上传完成")
+        log("模型上传完成", "success")
 
         success, error = remote_modeling_generator.generate_code(**kwargs)
         if not success:
-            log(f"生成代码失败: {error}")
+            log(f"生成代码失败: {error}", "error")
             return False, error
-        log("代码生成完成")
+        log("代码生成完成", "success")
 
         success, error = remote_modeling_collector.collect_files(**kwargs)
         if not success:
-            log(f"收集结果失败: {error}")
+            log(f"收集结果失败: {error}", "error")
             return False, error
-        log("结果收集完成")
-        log("所有操作已完成")
+        log("结果收集完成", "success")
+        log("所有操作已完成", "success")
         return True, None
     except Exception as e:
-        log(f"建模流程异常: {e}")
+        log(f"建模流程异常: {e}", "error")
         return False, str(e)
 
 

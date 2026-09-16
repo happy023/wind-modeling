@@ -543,41 +543,53 @@
             addLogEntry('开始下载结果文件...', 'info');
         }
 
+        // 转义 HTML，避免日志内容破坏页面；不用 emoji，与后端 ASCII 标签一致
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // 添加日志条目
         function addLogEntry(message, type = 'info') {
             const logEntry = document.createElement('div');
-            let icon, className;
+            let icon, className, rowClass;
 
             switch (type) {
-                case 'info':
-                    icon = 'fa-info-circle';
-                    className = 'text-gray-700';
-                    break;
                 case 'success':
                     icon = 'fa-check-circle';
-                    className = 'text-success';
+                    className = 'text-success font-semibold';
+                    rowClass = 'border-l-4 border-success bg-success/5 pl-2 rounded-r';
                     break;
                 case 'warning':
                     icon = 'fa-exclamation-triangle';
-                    className = 'text-warning';
+                    className = 'text-warning font-medium';
+                    rowClass = 'border-l-4 border-warning bg-warning/5 pl-2 rounded-r';
                     break;
                 case 'error':
                     icon = 'fa-times-circle';
-                    className = 'text-danger';
+                    className = 'text-danger font-semibold';
+                    rowClass = 'border-l-4 border-danger bg-danger/5 pl-2 rounded-r';
                     break;
                 default:
                     icon = 'fa-info-circle';
                     className = 'text-gray-700';
+                    rowClass = 'border-l-4 border-transparent pl-2';
+                    type = 'info';
             }
 
             const timestamp = new Date().toLocaleTimeString();
+            const safeMessage = escapeHtml(message);
 
-            logEntry.className = `flex items-start ${className} opacity-0 transform translate-y-2 transition-all duration-300`;
+            logEntry.className = `flex items-start ${className} ${rowClass} py-0.5 opacity-0 transform translate-y-2 transition-all duration-300`;
             logEntry.innerHTML = `
-                <i class="fa ${icon} mr-2 mt-0.5"></i>
-                <div>
+                <i class="fa ${icon} mr-2 mt-0.5 flex-shrink-0"></i>
+                <div class="min-w-0 break-all">
                     <span class="text-xs text-gray-500 mr-2">${timestamp}</span>
-                    <span>${message}</span>
+                    <span>${safeMessage}</span>
                 </div>
             `;
 

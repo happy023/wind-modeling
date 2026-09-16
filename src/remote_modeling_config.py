@@ -51,7 +51,7 @@ MODEL_CLASSES = [
     # 'ext.app.process.model.BOPProcessParamTableTitle',
     # 'ext.app.process.model.BOPProcessParamTableDetail',
     # 'com.hihonor.wftask.model.TaskCloseNotice',
-    #'ext.app.process.model.BOPStructPicture',
-    'ext.cirpoint.mpm.doc.model.CmWIPHandlingSuggestion'
+    # 'ext.app.process.model.BOPStructPicture',
+    # 'ext.cirpoint.mpm.doc.model.CmWIPHandlingSuggestion'
 ]
 

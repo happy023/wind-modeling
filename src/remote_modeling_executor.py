@@ -36,15 +36,108 @@ FAIL_MARKERS = (
     "系统找不到指定的文件",
 )
 
+# 纯 ASCII 级别标签：GBK/UTF-8 控制台、网页都安全，不用 emoji
+_LEVEL_TAGS = {
+    "success": "[OK]",
+    "error": "[ERR]",
+    "warning": "[WARN]",
+    "info": "[INFO]",
+}
+_LEVEL_ALIASES = {
+    "ok": "success",
+    "done": "success",
+    "succ": "success",
+    "err": "error",
+    "fail": "error",
+    "failed": "error",
+    "warn": "warning",
+}
+# 仅 TTY 着色；非 TTY / 重定向保持纯文本，避免污染日志文件与管道
+_LEVEL_ANSI = {
+    "success": "\033[1;32m",  # bold green
+    "error": "\033[1;31m",    # bold red
+    "warning": "\033[1;33m",  # bold yellow
+    "info": "\033[36m",       # cyan
+}
+_ANSI_RESET = "\033[0m"
 
-def log(msg: str) -> None:
-    """日志走 stderr，避免污染 wc 的 JSON stdout；GBK 控制台遇到 emoji 不崩。"""
+_ERROR_HINTS = (
+    "失败", "错误", "异常", "出错", "未能",
+    "failed", "error", "exception", "traceback", "build failed",
+)
+_SUCCESS_HINTS = ("成功", "完成", "已完成", "success", "done")
+_WARN_HINTS = ("警告", "warning", "warn")
+
+
+def normalize_log_level(level: Optional[str]) -> str:
+    key = (level or "info").strip().lower()
+    key = _LEVEL_ALIASES.get(key, key)
+    return key if key in _LEVEL_TAGS else "info"
+
+
+def detect_log_level(text: str) -> str:
+    """从标签或关键词推断级别（前端/落盘用；正文可无 ANSI）。"""
+    raw = (text or "").strip()
+    if not raw:
+        return "info"
+    for level, tag in _LEVEL_TAGS.items():
+        if raw.startswith(tag):
+            return level
+    lower = raw.lower()
+    for hint in _ERROR_HINTS:
+        if hint in raw or hint in lower:
+            return "error"
+    for hint in _SUCCESS_HINTS:
+        if hint in raw or hint in lower:
+            return "success"
+    for hint in _WARN_HINTS:
+        if hint in raw or hint in lower:
+            return "warning"
+    return "info"
+
+
+def _stream_isatty(stream) -> bool:
     try:
-        sys.stderr.write(str(msg) + "\n")
-        sys.stderr.flush()
+        return bool(stream.isatty())
     except Exception:
-        sys.stderr.buffer.write((str(msg) + "\n").encode("utf-8", errors="replace"))
-        sys.stderr.buffer.flush()
+        return False
+
+
+def _safe_write(stream, text: str) -> None:
+    """写入流；编码失败时用 UTF-8 replace，兼容 GBK 控制台。"""
+    try:
+        stream.write(text)
+        stream.flush()
+    except Exception:
+        try:
+            data = text.encode("utf-8", errors="replace")
+            buf = getattr(stream, "buffer", None)
+            if buf is not None:
+                buf.write(data)
+                buf.flush()
+            else:
+                sys.stderr.buffer.write(data)
+                sys.stderr.buffer.flush()
+        except Exception:
+            pass
+
+
+def log(msg: str, level: str = "info") -> None:
+    """统一日志：ASCII 级别标签 + 可选 ANSI（仅 TTY）。
+
+    - 走 stderr，避免污染 CLI JSON stdout
+    - 不用 emoji，避免 GBK Windows 控制台炸编码
+    - 与 Linux/Windows 远程交互无关的本地展示层，正文保持原样
+    """
+    lvl = normalize_log_level(level)
+    tag = _LEVEL_TAGS[lvl]
+    plain = f"{tag} {msg}"
+    stream = sys.stderr
+    if _stream_isatty(stream):
+        colored = f"{_LEVEL_ANSI[lvl]}{plain}{_ANSI_RESET}\n"
+        _safe_write(stream, colored)
+    else:
+        _safe_write(stream, plain + "\n")
 
 
 class SmartWindchillExecutor:
@@ -112,14 +205,14 @@ class SmartWindchillExecutor:
                     entered = True
                     self.prompt_pattern = re.compile(r"wt\>\>\s*$")
                     self.command_end_markers = [self.prompt_pattern]
-                    log("已进入 Windchill shell")
+                    log("已进入 Windchill shell", "success")
                     break
             if not entered:
-                log("未能进入 Windchill shell（未检测到 wt>> 提示符），请检查 windchill 命令是否可用")
+                log("未能进入 Windchill shell（未检测到 wt>> 提示符），请检查 windchill 命令是否可用", "error")
 
             return True
         except Exception as e:
-            log(f"连接失败: {e}")
+            log(f"连接失败: {e}", "error")
             self.close()
             return False
 
@@ -175,7 +268,8 @@ class SmartWindchillExecutor:
                 err = decode_bytes(stderr.read() or b"")
                 msg = f"{out}\n{err}".strip()
                 failed = any(k in msg for k in FAIL_MARKERS)
-                log(f"{'执行失败' if failed else '执行成功'}: {command}")
+                log(f"{'执行失败' if failed else '执行成功'}: {command}",
+                    "error" if failed else "success")
                 if msg:
                     log(msg)
                 return (not failed), msg
@@ -188,13 +282,14 @@ class SmartWindchillExecutor:
             msg = "\n".join(cleaned).strip()
 
             failed = any(k in msg for k in FAIL_MARKERS)
-            log(f"{'执行失败' if failed else '执行成功'}: {command}")
+            log(f"{'执行失败' if failed else '执行成功'}: {command}",
+                "error" if failed else "success")
             if msg:
                 log(msg)
             return (not failed), msg
         except Exception as e:
             error = f"执行出错: {e}，命令 {command}"
-            log(error)
+            log(error, "error")
             return False, error
 
     def execute_windchill(self, commands: List[str], timeout: Optional[int] = None) -> Tuple[bool, str]:
@@ -223,13 +318,14 @@ class SmartWindchillExecutor:
             err = decode_bytes(stderr.read() or b"")
             msg = f"{out}\n{err}".strip()
             failed = any(k in msg for k in FAIL_MARKERS)
-            log(f"{'执行失败' if failed else '执行成功'}: Windchill 批量命令")
+            log(f"{'执行失败' if failed else '执行成功'}: Windchill 批量命令",
+                "error" if failed else "success")
             if msg:
                 log(msg)
             return (not failed), msg
         except Exception as e:
             error = f"执行出错: {e}"
-            log(error)
+            log(error, "error")
             return False, error
 
     def execute_commands(self, commands: List[str]) -> List[Tuple[bool, str]]:
