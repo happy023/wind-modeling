@@ -83,9 +83,33 @@ print(run_pipeline(session))
 
 独立脚本用法（编辑 `remote_modeling_config.py` 后在 `src/` 下运行）**保持不变**。
 
-## 配置
+## 建模机列表配置（推荐，多机）
 
-编辑 `src/remote_modeling_config.py` 文件配置连接信息：
+建模服务器通常固定几台，**与业务 Windchill / 项目无关**。复制仓库根目录：
+
+```bash
+cp modeling.servers.example.yaml modeling.servers.yaml   # 已 gitignore，填入真实密码
+# 或: 设置环境变量 WIND_MODELING_SERVERS=/path/to/modeling.servers.yaml
+```
+
+```python
+from wind_modeling import build_session_from_config, list_modeling_servers, run_pipeline
+
+print(list_modeling_servers())  # 密码打码
+server, session = build_session_from_config(
+    "lab-wc11",  # 或 None 用 default
+    model_classes=["ext.app.Foo"],
+    local_root="../model",
+    local_base="../dist",
+)
+print(run_pipeline(session))
+```
+
+> **windchill-cli**：当前 `wc model` 仍读自身 `config.yaml` 的 `modeling` 段；**建议后续改为共用本文件**，避免两套凭据。
+
+## 配置（旧：单机脚本）
+
+编辑 `src/remote_modeling_config.py` 文件配置连接信息（独立脚本仍可用）：
 
 ### Windchill连接配置（连接Windchill建模服务）
 

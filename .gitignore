@@ -144,3 +144,6 @@ cython_debug/
 model/
 modeling.log
 .reasonix/
+
+# 建模机凭据（复制自 modeling.servers.example.yaml）
+modeling.servers.yaml

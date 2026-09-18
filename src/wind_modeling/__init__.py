@@ -4,14 +4,28 @@
 """
 
 from .api import ModelingSession, collect, generate, prepare, run_pipeline, upload
+from .servers import (
+    ModelingServer,
+    ServersFile,
+    build_session_from_config,
+    list_modeling_servers,
+    load_servers,
+    resolve_servers_config_path,
+)
 
 __all__ = [
     "ModelingSession",
+    "ModelingServer",
+    "ServersFile",
     "prepare",
     "upload",
     "generate",
     "collect",
     "run_pipeline",
+    "build_session_from_config",
+    "list_modeling_servers",
+    "load_servers",
+    "resolve_servers_config_path",
 ]
 
 __version__ = "0.1.0"

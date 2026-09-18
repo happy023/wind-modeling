@@ -1,0 +1,31 @@
+# 建模服务器列表（与业务 Windchill / 项目 profile 无关）
+#
+# 用法：
+#   1. 复制本文件为 modeling.servers.yaml（同目录，已 gitignore）
+#   2. 填写 host / 密码等；default 填默认机 id
+#   3. 环境变量 WIND_MODELING_SERVERS 可指向任意路径覆盖
+#
+# 调用方：wind-modeling API、shark-brain 工作台；windchill-cli 建议后续改读本文件。
+
+default: lab-wc11
+
+servers:
+  lab-wc11:
+    label: "实验室 WC11 建模机"
+    host: 192.168.1.100
+    user: root
+    password: "change-me"
+    port: 22
+    wt_home: /ptc/Windchill_11.0/Windchill
+    # os: linux   # 可选：linux / windows；省略则连接后自动探测
+    timeout: 60
+
+  # win-model:
+  #   label: "Windows 建模机"
+  #   host: 192.168.1.50
+  #   user: Administrator
+  #   password: "change-me"
+  #   port: 22
+  #   wt_home: C:/ptc/Windchill_11.0/Windchill
+  #   os: windows
+  #   timeout: 60
